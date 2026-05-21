@@ -59,8 +59,9 @@ public class Othello {
     static RLNode whiteRLNode = new RLNode(0, new HashMap<>(), null);
     static RLNode blackRLNode = new RLNode(0, new HashMap<>(), null);
 
-    static int abType = 0;
 
+    //mode of running main, true will run with every playing algorithm and show resulting win/loss/tie rates, false will play the number of games with the specified algorithms
+    static boolean testMode = false;
 
     //mode of playing, 0 for human player, 1 for random, 2 for max tiles, 3 for weighted squares, 4 for rla, 5 for alpha-beta
     static int blackType = 1;
@@ -75,42 +76,45 @@ public class Othello {
     //depth of minimax searching
     static int abDepth = 4;
 
-
     public static void main(String[] args) {
-        //Running main will produce the win/loss/draw rates, as well as the average score and time taken to play, of each algorithm against the random algorithm
-        int[] wins = new int[6];
-        int[] losses = new int[6];
-        int[] draws = new int[6];
-        int[] score = new int[6];
-        long[] times = new long[6];
-        for (int i = 1; i < 6; i++) {
-            whiteType = i;
-            totalWhiteWins = 0;
-            totalBlackWins = 0;
-            totalDraws = 0;
-            totalBlackScore = 0;
-            totalWhiteScore = 0;
-            long startTime = System.nanoTime();
+        if (testMode) {
+            //Running main will produce the win/loss/draw rates, as well as the average score and time taken to play, of each algorithm against the random algorithm
+            int[] wins = new int[6];
+            int[] losses = new int[6];
+            int[] draws = new int[6];
+            int[] score = new int[6];
+            long[] times = new long[6];
+            blackType = 1;
+            for (int i = 1; i < 6; i++) {
+                whiteType = i;
+                totalWhiteWins = 0;
+                totalBlackWins = 0;
+                totalDraws = 0;
+                totalBlackScore = 0;
+                totalWhiteScore = 0;
+                long startTime = System.nanoTime();
+                initializeGame();
+                times[i] = System.nanoTime() - startTime;
+                wins[i] = totalWhiteWins;
+                losses[i] = totalBlackWins;
+                draws[i] = totalDraws;
+                score[i] = totalWhiteScore;
+            }
+            System.out.println("RESULTS:");
+            int i = 1;
+            System.out.println("Random:           Wins : " + wins[i] + ", Losses : " + losses[i] + ", Draws : " + draws[i] + ", Average Score : " + ((double)score[i]/numGames) + ", Time : " + ((double)times[i]/1000000000) + " seconds");
+            i++;
+            System.out.println("Max-Move:         Wins : " + wins[i] + ", Losses : " + losses[i] + ", Draws : " + draws[i] + ", Average Score : " + ((double)score[i]/numGames) + ", Time : " + ((double)times[i]/1000000000) + " seconds");
+            i++;
+            System.out.println("Weighted-Squares: Wins : " + wins[i] + ", Losses : " + losses[i] + ", Draws : " + draws[i] + ", Average Score : " + ((double)score[i]/numGames) + ", Time : " + ((double)times[i]/1000000000) + " seconds");
+            i++;
+            System.out.println("RLA:              Wins : " + wins[i] + ", Losses : " + losses[i] + ", Draws : " + draws[i] + ", Average Score : " + ((double)score[i]/numGames) + ", Time : " + (((double)times[i])/1000000000) + " seconds");
+            i++;
+            System.out.println("Alpha-Beta:       Wins : " + wins[i] + ", Losses : " + losses[i] + ", Draws : " + draws[i] + ", Average Score : " + ((double)score[i]/numGames) + ", Time : " + ((double)times[i]/1000000000) + " seconds");
+            printWeightedBoard();
+        } else {
             initializeGame();
-            times[i] = System.nanoTime() - startTime;
-            wins[i] = totalWhiteWins;
-            losses[i] = totalBlackWins;
-            draws[i] = totalDraws;
-            score[i] = totalWhiteScore;
         }
-        System.out.println("RESULTS:");
-        int i = 1;
-        System.out.println("Random:           Wins : " + wins[i] + ", Losses : " + losses[i] + ", Draws : " + draws[i] + ", Average Score : " + ((double)score[i]/numGames) + ", Time : " + ((double)times[i]/1000000000) + " seconds");
-        i++;
-        System.out.println("Max-Move:         Wins : " + wins[i] + ", Losses : " + losses[i] + ", Draws : " + draws[i] + ", Average Score : " + ((double)score[i]/numGames) + ", Time : " + ((double)times[i]/1000000000) + " seconds");
-        i++;
-        System.out.println("Weighted-Squares: Wins : " + wins[i] + ", Losses : " + losses[i] + ", Draws : " + draws[i] + ", Average Score : " + ((double)score[i]/numGames) + ", Time : " + ((double)times[i]/1000000000) + " seconds");
-        i++;
-        System.out.println("RLA:              Wins : " + wins[i] + ", Losses : " + losses[i] + ", Draws : " + draws[i] + ", Average Score : " + ((double)score[i]/numGames) + ", Time : " + (((double)times[i])/1000000000) + " seconds");
-        i++;
-        System.out.println("Alpha-Beta:       Wins : " + wins[i] + ", Losses : " + losses[i] + ", Draws : " + draws[i] + ", Average Score : " + ((double)score[i]/numGames) + ", Time : " + ((double)times[i]/1000000000) + " seconds");
-        printWeightedBoard();
-
     }
 
     private static void initializeGame() {
@@ -120,11 +124,6 @@ public class Othello {
         int whiteWins = 0;
         int draws = 0;
         for (int i = 0; i < numGames; i++) {
-            if (i % 1000 == 0) {
-                System.out.println("BLACK WINS: " + blackWins + ", AVERAGE SCORE : " + ((double)blackTotal/i));
-                System.out.println("WHITE WINS: " + whiteWins + ", AVERAGE SCORE : " + ((double)whiteTotal/i));
-                System.out.println("DRAWS: " + draws);
-            }
             int result = playGame();
             if (result == BLACK) {
                 blackWins++;
@@ -272,18 +271,8 @@ public class Othello {
         ABNode bestChild = null;
         Integer childBound = null;
         if (depth == 0 || moves.isEmpty()) {
-            if (abType == 0) {
-                int score = countScore(board, currentColor);
-                return new ABNode(nodeMove, currentColor, null, score);
-            } else {
-                fillWeightedBoard();
-                if (nodeMove != null) {
-                    int score = weightedBoard[toI(toEnd(nodeMove))][toJ(toEnd(nodeMove))];
-                    return new ABNode(nodeMove, currentColor, null, score);
-                } else {
-                    return new ABNode(nodeMove, currentColor, null, -122);
-                }
-            }
+            int score = countScore(board, currentColor);
+            return new ABNode(nodeMove, currentColor, null, score);
         } else {
             for (Integer move : moves) {
                 int[][] copy = copyBoard(board);
